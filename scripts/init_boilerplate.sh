@@ -106,7 +106,7 @@ init_and_push() {
 
 # ============================================================
 # boilerplate-fe, boilerplate-be 가 있는 상위 디렉토리
-# (claude-first-project 와 같은 레벨에 위치)
+# (boilerplate-app 와 같은 레벨에 위치)
 # ============================================================
 BOILERPLATE_BASE_DIR="${ROOT_DIR}/.."
 

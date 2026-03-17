@@ -48,10 +48,10 @@ info "필수 값 검증 완료"
 # ============================================================
 # 의존성 확인
 # ============================================================
-for cmd in git curl aws; do
+for cmd in git curl; do
   command -v "$cmd" &> /dev/null || error "'$cmd' 가 설치되어 있지 않습니다."
 done
-info "의존성 확인 완료 (git, curl, aws)"
+info "의존성 확인 완료 (git, curl)"
 
 GITHUB_API="https://api.github.com"
 AUTH_HEADER="Authorization: token ${GITHUB_TOKEN}"
@@ -166,8 +166,9 @@ setup_sub_repo() {
 # 1. GitHub 레포 생성
 # ============================================================
 info "===== GitHub 레포 생성 ====="
-create_github_repo "$FE_REPO_NAME" "Frontend for ${PROJECT_NAME}"
-create_github_repo "$BE_REPO_NAME" "Backend for ${PROJECT_NAME}"
+create_github_repo "$PROJECT_NAME"  "Main repository for ${PROJECT_NAME}"
+create_github_repo "$FE_REPO_NAME"  "Frontend for ${PROJECT_NAME}"
+create_github_repo "$BE_REPO_NAME"  "Backend for ${PROJECT_NAME}"
 
 # ============================================================
 # 2. boilerplate 기반으로 fe/be 초기화
@@ -193,6 +194,9 @@ info "Main repo 업데이트 완료"
 # 4. S3 Terraform state 버킷 + DynamoDB lock 테이블 생성
 # ============================================================
 info "===== Terraform 백엔드 생성 ====="
+if ! command -v aws &> /dev/null; then
+  warn "aws CLI 가 없어 Terraform 백엔드 생성을 건너뜁니다."
+else
 
 if aws s3api head-bucket --bucket "$TF_STATE_BUCKET" 2>/dev/null; then
   warn "S3 버킷이 이미 존재합니다: ${TF_STATE_BUCKET}"
@@ -225,6 +229,7 @@ else
     --billing-mode PAY_PER_REQUEST \
     --region "$AWS_REGION"
   info "DynamoDB lock 테이블 생성 완료: ${LOCK_TABLE}"
+  fi
 fi
 
 # ============================================================
