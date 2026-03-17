@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/1124118/dev/0woodev/boilerplate-fe/**)",
+      "Read(//Users/1124118/dev/0woodev/boilerplate-be/**)",
+      "Bash(chmod:*)",
+      "Bash(git init:*)",
+      "Bash(git branch:*)"
+    ]
+  }
+}
