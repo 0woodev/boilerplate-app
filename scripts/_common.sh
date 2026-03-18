@@ -15,16 +15,17 @@ error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[1]}")" && pwd)"
 ROOT_DIR="${SCRIPT_DIR}/.."
-CONFIG_FILE="${ROOT_DIR}/config.env"
-CONFIG_SAMPLE="${ROOT_DIR}/config.env.sample"
+STAGE="${STAGE:-dev}"
+CONFIG_FILE="${ROOT_DIR}/${STAGE}.env"
+CONFIG_SAMPLE="${ROOT_DIR}/sample.env"
 
 if [ ! -f "$CONFIG_FILE" ]; then
-  [ -f "$CONFIG_SAMPLE" ] || error "config.env.sample 파일이 없습니다: $CONFIG_SAMPLE"
+  [ -f "$CONFIG_SAMPLE" ] || error "sample.env 파일이 없습니다: $CONFIG_SAMPLE"
   cp "$CONFIG_SAMPLE" "$CONFIG_FILE"
-  info "config.env.sample → config.env 복사 완료"
-  warn "config.env 를 열어 값을 채운 후 다시 실행해주세요."
+  info "sample.env → ${STAGE}.env 복사 완료"
+  warn "${STAGE}.env 를 열어 값을 채운 후 다시 실행해주세요."
   exit 0
 fi
 
 source "$CONFIG_FILE"
-info "config.env 로드 완료"
+info "${STAGE}.env 로드 완료"
