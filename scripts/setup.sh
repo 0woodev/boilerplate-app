@@ -14,23 +14,23 @@ warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
 # ============================================================
-# config.env 로드
+# dev.env 로드
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${SCRIPT_DIR}/.."
-CONFIG_FILE="${ROOT_DIR}/config.env"
-CONFIG_SAMPLE="${ROOT_DIR}/config.env.sample"
+CONFIG_FILE="${ROOT_DIR}/dev.env"
+CONFIG_SAMPLE="${ROOT_DIR}/sample.env"
 
 if [ ! -f "$CONFIG_FILE" ]; then
-  [ -f "$CONFIG_SAMPLE" ] || error "config.env.sample 파일이 없습니다: $CONFIG_SAMPLE"
+  [ -f "$CONFIG_SAMPLE" ] || error "sample.env 파일이 없습니다: $CONFIG_SAMPLE"
   cp "$CONFIG_SAMPLE" "$CONFIG_FILE"
-  info "config.env.sample → config.env 복사 완료"
-  warn "config.env 를 열어 값을 채운 후 다시 실행해주세요."
+  info "sample.env → dev.env 복사 완료"
+  warn "dev.env 를 열어 값을 채운 후 다시 실행해주세요."
   exit 0
 fi
 
 source "$CONFIG_FILE"
-info "config.env 로드 완료"
+info "dev.env 로드 완료"
 
 # git 인증용 base URL (토큰 포함, git 내부에서만 사용)
 GIT_BASE="https://x-access-token:${GITHUB_TOKEN}@github.com"
@@ -41,7 +41,7 @@ GIT_BASE="https://x-access-token:${GITHUB_TOKEN}@github.com"
 for var in PROJECT_NAME GITHUB_OWNER GITHUB_OWNER_TYPE GITHUB_TOKEN \
            BOILERPLATE_OWNER BOILERPLATE_FE_REPO BOILERPLATE_BE_REPO \
            AWS_REGION AWS_ACCOUNT_ID; do
-  [ -n "${!var}" ] || error "${var} 이 config.env 에 설정되지 않았습니다."
+  [ -n "${!var}" ] || error "${var} 이 dev.env 에 설정되지 않았습니다."
 done
 info "필수 값 검증 완료"
 
@@ -154,9 +154,16 @@ setup_sub_repo() {
   git -C "$tmp_dir" push -u origin main
   info "푸시 완료: ${GITHUB_OWNER}/${new_repo_name}"
 
+  # 기존 submodule 제거 후 새 URL로 재등록
+  if git -C "$ROOT_DIR" config --file "$ROOT_DIR/.gitmodules" --get "submodule.${submodule_path}.url" 2>/dev/null; then
+    git -C "$ROOT_DIR" submodule deinit -f "$submodule_path" 2>/dev/null || true
+    git -C "$ROOT_DIR" rm -f "$submodule_path" 2>/dev/null || true
+    rm -rf "$ROOT_DIR/.git/modules/$submodule_path"
+    info "기존 submodule 제거 완료: ${submodule_path}"
+  fi
+
   # submodule 등록 (plain URL 사용 - .gitmodules 에 커밋됨)
-  git -C "$ROOT_DIR" submodule add "$plain_remote" "$submodule_path" \
-    || warn "${submodule_path} submodule 이 이미 존재합니다"
+  git -C "$ROOT_DIR" submodule add "$plain_remote" "$submodule_path"
 
   rm -rf "$tmp_dir"
   info "submodule 등록 완료: ${submodule_path} → ${new_repo_name}"
@@ -185,9 +192,12 @@ setup_sub_repo "$BOILERPLATE_BE_REPO" "$BE_REPO_NAME" "be"
 info "===== Main repo 커밋 ====="
 cd "$ROOT_DIR"
 
+# origin을 새 레포로 변경 (boilerplate-app clone 시 원래 remote 덮어쓰기)
+git remote set-url origin "${GIT_BASE}/${GITHUB_OWNER}/${PROJECT_NAME}.git"
+
 git add .gitmodules fe be
 git commit -m "chore: add fe/be submodules for ${PROJECT_NAME}"
-git push "${GIT_BASE}/${GITHUB_OWNER}/${PROJECT_NAME}.git" main
+git push -u origin main
 info "Main repo 업데이트 완료"
 
 # ============================================================
