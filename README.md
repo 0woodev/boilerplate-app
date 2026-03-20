@@ -133,12 +133,10 @@ cd be && make gh-setup STAGE=prod
 
 ### 6. GitHub Actions Secrets 등록
 
-GitHub → `{app_name}-be` 레포 → Settings → Secrets and variables → Actions
-
-| Secret | 값 |
-|---|---|
-| `AWS_ACCESS_KEY_ID` | IAM Access Key |
-| `AWS_SECRET_ACCESS_KEY` | IAM Secret Key |
+```bash
+gh secret set AWS_ACCESS_KEY_ID --repo {github_owner}/{app_name}-be
+gh secret set AWS_SECRET_ACCESS_KEY --repo {github_owner}/{app_name}-be
+```
 
 > 이 키는 **Step 7 (global.yml)** 실행 후에는 더 이상 사용되지 않음. OIDC로 대체됨.
 
