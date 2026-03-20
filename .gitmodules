@@ -1,0 +1,6 @@
+[submodule "be"]
+	path = be
+	url = https://github.com/0woodev/boilerplate-be
+[submodule "fe"]
+	path = fe
+	url = https://github.com/0woodev/boilerplate-fe
