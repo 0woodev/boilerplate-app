@@ -178,6 +178,8 @@ git push origin main
 
 > `terraform/**`, `app/**`, `common/**`, `requirements.txt` 변경 시에만 워크플로우 실행됨.
 
+> **브랜치 보호**: `{app_name}-be` 레포의 `main` 브랜치는 PR 없이 직접 push가 불가합니다. 단, 레포 owner(admin)는 예외적으로 직접 push가 가능합니다. 대규모 작업 시 활용하세요.
+
 apply.yml이 실행하는 것:
 1. Lambda 빌드 (SHA256 증분 빌드 — 변경된 함수만 재빌드)
 2. `terraform apply` — Lambda, API Gateway, IAM 등 인프라 생성/갱신
