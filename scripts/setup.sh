@@ -243,6 +243,78 @@ else
 fi
 
 # ============================================================
+# 5. Global AWS 리소스 생성 (계정당 1회, Terraform 외부 관리)
+#    - OIDC Provider: GitHub Actions 인증
+#    - Wildcard ACM Cert: 커스텀 도메인 HTTPS
+# ============================================================
+info "===== Global AWS 리소스 생성 ====="
+if ! command -v aws &> /dev/null; then
+  warn "aws CLI 가 없어 Global 리소스 생성을 건너뜁니다."
+else
+
+# OIDC Provider
+OIDC_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
+if aws iam get-open-id-connect-provider --open-id-connect-provider-arn "$OIDC_ARN" 2>/dev/null; then
+  warn "OIDC Provider 이미 존재합니다: ${OIDC_ARN}"
+else
+  aws iam create-open-id-connect-provider \
+    --url "https://token.actions.githubusercontent.com" \
+    --client-id-list "sts.amazonaws.com" \
+    --thumbprint-list "6938fd4d98bab03faadb97b34396831e3780aea1"
+  info "OIDC Provider 생성 완료"
+fi
+
+# Wildcard ACM Certificate (us-east-1 고정)
+# BE/FE 모두 CloudFront를 사용하므로 us-east-1 인증서 하나로 통일
+if [ -z "$DOMAIN" ]; then
+  warn "DOMAIN 이 설정되지 않아 ACM 인증서 생성을 건너뜁니다."
+else
+  EXISTING_CERT=$(aws acm list-certificates \
+    --region us-east-1 \
+    --query "CertificateSummaryList[?DomainName=='*.${DOMAIN}'].CertificateArn" \
+    --output text)
+
+  if [ -n "$EXISTING_CERT" ] && [ "$EXISTING_CERT" != "None" ]; then
+    warn "Wildcard ACM 인증서 이미 존재합니다 (us-east-1): ${EXISTING_CERT}"
+  else
+    info "Wildcard ACM 인증서 생성 중 (us-east-1): *.${DOMAIN}"
+    CERT_ARN=$(aws acm request-certificate \
+      --domain-name "*.${DOMAIN}" \
+      --validation-method DNS \
+      --region us-east-1 \
+      --query 'CertificateArn' --output text)
+
+    sleep 5  # DNS validation options 생성 대기
+
+    CNAME_NAME=$(aws acm describe-certificate \
+      --certificate-arn "$CERT_ARN" \
+      --region us-east-1 \
+      --query 'Certificate.DomainValidationOptions[0].ResourceRecord.Name' \
+      --output text)
+
+    CNAME_VALUE=$(aws acm describe-certificate \
+      --certificate-arn "$CERT_ARN" \
+      --region us-east-1 \
+      --query 'Certificate.DomainValidationOptions[0].ResourceRecord.Value' \
+      --output text)
+
+    ZONE_ID=$(aws route53 list-hosted-zones-by-name \
+      --dns-name "${DOMAIN}." \
+      --query 'HostedZones[0].Id' --output text | sed 's|/hostedzone/||')
+
+    aws route53 change-resource-record-sets \
+      --hosted-zone-id "$ZONE_ID" \
+      --change-batch "{\"Changes\":[{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"${CNAME_NAME}\",\"Type\":\"CNAME\",\"TTL\":60,\"ResourceRecords\":[{\"Value\":\"${CNAME_VALUE}\"}]}}]}"
+
+    info "DNS validation 레코드 생성 완료. 인증서 검증 대기 중... (최대 3분)"
+    aws acm wait certificate-validated --certificate-arn "$CERT_ARN" --region us-east-1
+    info "ACM Wildcard 인증서 발급 완료 (us-east-1): ${CERT_ARN}"
+  fi
+fi
+
+fi  # aws CLI check
+
+# ============================================================
 # 완료
 # ============================================================
 echo ""
