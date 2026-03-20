@@ -182,6 +182,25 @@ apply.yml이 실행하는 것:
 1. Lambda 빌드 (SHA256 증분 빌드 — 변경된 함수만 재빌드)
 2. `terraform apply` — Lambda, API Gateway, IAM 등 인프라 생성/갱신
 
+#### 최초 배포 후 도메인 접속 대기
+
+**최초 배포 시 커스텀 도메인(`{app}-api.wooapps.net`)은 배포 완료 후 약 3~5분 후에 접근 가능합니다.**
+
+이유: Terraform이 Route53 DNS 레코드를 생성하더라도, 로컬 DNS 캐시 및 ISP DNS 서버에 전파되기까지 시간이 필요합니다. 이미 접속을 시도했다면 "없는 도메인"으로 캐시가 남아 더 오래 걸릴 수 있습니다.
+
+접속이 안 될 경우 해결 방법:
+
+```bash
+# 1. Mac DNS 캐시 초기화
+sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder
+```
+
+크롬의 경우 추가로:
+1. `chrome://net-internals/#dns` 접속
+2. **Clear host cache** 클릭
+
+위 방법으로도 안 되면 ISP DNS가 아직 전파되지 않은 것이므로 잠시 기다렸다가 재시도하세요.
+
 ---
 
 ## 프로젝트 삭제
