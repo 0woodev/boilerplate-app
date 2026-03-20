@@ -159,6 +159,8 @@ GitHub → `{app_name}-be` 레포 → Actions → **Terraform Global (One-time S
 | PR → `dev` / `main` | `plan.yml` | terraform plan 후 PR에 결과 코멘트 자동 작성 |
 | push to `dev` | `apply.yml` | dev 환경에 terraform apply |
 | push to `main` | `apply.yml` | prod 환경에 terraform apply |
+| 수동 (`dev` 브랜치) | `destroy.yml` | dev 환경 AWS 리소스 삭제 |
+| 수동 (`main` 브랜치) | `destroy.yml` | prod 환경 AWS 리소스 삭제 (승인 필요) |
 
 > 자세한 다이어그램은 [인프라 구조](#인프라-구조) 참고.
 
@@ -179,6 +181,44 @@ git push origin main
 apply.yml이 실행하는 것:
 1. Lambda 빌드 (SHA256 증분 빌드 — 변경된 함수만 재빌드)
 2. `terraform apply` — Lambda, API Gateway, IAM 등 인프라 생성/갱신
+
+---
+
+## 프로젝트 삭제
+
+### 1단계: AWS 리소스 삭제 (GitHub Actions)
+
+GitHub → `{app_name}-be` 레포 → Actions → **Terraform Destroy** → Run workflow
+
+| 브랜치 | 삭제 대상 | 승인 |
+|---|---|---|
+| `dev` | dev 환경 AWS 리소스 | 불필요 |
+| `main` | prod 환경 AWS 리소스 | prod environment 승인 필요 |
+
+`confirm` 입력창에 `yes` 를 입력해야 실행됩니다.
+
+> **반드시 이 단계를 먼저 실행해야 합니다.** Lambda, API Gateway, DynamoDB 등 AWS 리소스가 먼저 삭제되어야 합니다.
+
+### 2단계: GitHub 레포 + S3 + DynamoDB 정리
+
+```bash
+bash scripts/teardown.sh
+```
+
+실행 결과:
+1. GitHub 레포 3개 (`{app_name}-be`, `{app_name}-fe`, `{app_name}`) 삭제
+2. S3 tf-state 버킷 삭제 (전체 버전 포함)
+3. DynamoDB lock 테이블 삭제
+
+### 3단계: 로컬 폴더 삭제
+
+스크립트 종료 후 출력되는 명령어를 직접 실행:
+
+```bash
+rm -rf /path/to/{app_name}
+```
+
+> 스크립트 자신이 폴더 안에 있어서 자동 실행되지 않습니다.
 
 ---
 
