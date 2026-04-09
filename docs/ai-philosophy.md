@@ -105,16 +105,18 @@ agent-deck  # TUI 실행
 ## 파일 기반 세션 연속성
 
 Claude Code 세션은 컨텍스트가 초기화되면 이전 대화를 기억하지 못한다.
-이 문제를 `PROGRESS.md` 패턴으로 해결한다.
+이 문제를 `CLAUDE.md` 파일에 진행 현황을 함께 관리하는 방식으로 해결한다.
 
 ### 패턴
-1. 각 서브레포(`be/`, `fe/`)에 `PROGRESS.md` 유지
-2. 세션 시작 시 Claude가 이 파일을 읽어 맥락 복원
-3. 작업 종료 시 Claude가 이 파일을 업데이트
+1. 각 서브레포(`be/`, `fe/`)의 `CLAUDE.md` 하단에 **진행 현황** 섹션 유지
+2. Claude Code 세션 시작 시 `CLAUDE.md`가 자동 로드되어 맥락 복원
+3. 작업 종료 시 Claude가 `CLAUDE.md`의 진행 현황을 업데이트
 
-### 예시 (`be/PROGRESS.md` 일부)
+### 예시 (`be/CLAUDE.md` 진행 현황 섹션)
 ```markdown
-## Pending 작업 (다음 대화에서 이어서)
+## 진행 현황
+
+### Pending 작업
 
 1. CloudFront + S3 FE 인프라 구성
 2. 인증 미들웨어 (JWT/Cognito)

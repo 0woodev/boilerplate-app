@@ -336,8 +336,7 @@ make api name=api_post_order domain=order
 ```bash
 # be/ 작업 시작 (이전 세션 맥락 복원)
 cd be
-cat PROGRESS.md    # 이전 작업 현황 확인
-claude             # Claude Code 실행
+claude             # Claude Code 실행 — CLAUDE.md 자동 로드
 ```
 
 ### 스킬(Skills)

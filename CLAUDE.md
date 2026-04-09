@@ -31,8 +31,8 @@ boilerplate-app/        ← 이 레포 (orchestrator)
 이전 세션에서 이어서 작업한다면:
 
 ```bash
-cat be/PROGRESS.md    # BE 작업 현황
-cat fe/PROGRESS.md    # FE 작업 현황 (있으면)
+cat be/CLAUDE.md    # BE 작업 현황 + 진행 현황
+cat fe/CLAUDE.md    # FE 작업 현황 + 진행 현황
 ```
 
 ---

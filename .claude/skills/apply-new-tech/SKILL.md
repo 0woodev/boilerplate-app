@@ -19,7 +19,7 @@ description: 새 기술을 프로젝트 전체(BE + FE + 인프라)에 도입하
 
 - `be/requirements.txt` — 백엔드 의존성
 - `fe/package.json` — 프론트엔드 의존성
-- `be/PROGRESS.md` / `fe/PROGRESS.md` — 현재 진행 현황
+- `be/CLAUDE.md` / `fe/CLAUDE.md` — 현재 진행 현황
 - `be/terraform/` 구조 — 인프라 현황 (Lambda, DynamoDB, API Gateway)
 
 핵심 확인 포인트:
@@ -79,9 +79,9 @@ STEP 7. 검증 방법 (로컬 + dev 배포 후 확인)
 
 실제 코드 스니펫을 최대한 포함한다.
 
-### 6. PROGRESS.md 업데이트 제안
+### 6. CLAUDE.md 업데이트 제안
 
-be/, fe/ 중 해당하는 곳의 `PROGRESS.md`에 추가할 항목을 제안한다:
+be/, fe/ 중 해당하는 곳의 `CLAUDE.md`에 추가할 항목을 제안한다:
 
 ```markdown
 - [ ] **{기술명} 도입** — {한 줄 설명}
@@ -95,4 +95,4 @@ be/, fe/ 중 해당하는 곳의 `PROGRESS.md`에 추가할 항목을 제안한�
 2. **도입 옵션 비교표**
 3. **추천 방향 + 이유**
 4. **실행 계획 (단계별 코드 포함)**
-5. **PROGRESS.md 업데이트 제안**
+5. **CLAUDE.md 업데이트 제안**
