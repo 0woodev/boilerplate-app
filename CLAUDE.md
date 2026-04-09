@@ -1,5 +1,8 @@
 # CLAUDE.md — boilerplate-app
 
+이 프로젝트는 **풀스택 개발자를 위한 boilerplate**다.
+BE(Python Lambda) + FE(React/Vite) + 인프라(Terraform)를 하나의 레포에서 관리한다.
+
 Claude Code가 이 레포를 처음 열 때 읽는 컨텍스트 파일.
 
 ---
