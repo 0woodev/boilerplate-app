@@ -327,6 +327,62 @@ make api name=api_post_order domain=order
 
 ---
 
+## Claude Code AI 협업
+
+이 boilerplate는 Claude Code를 활용한 멀티 에이전트 협업 패턴을 내장하고 있다.
+
+### 세션 시작
+
+```bash
+# be/ 작업 시작 (이전 세션 맥락 복원)
+cd be
+cat PROGRESS.md    # 이전 작업 현황 확인
+claude             # Claude Code 실행
+```
+
+### 스킬(Skills)
+
+`be/` 디렉토리에서 사용 가능한 Claude Code 스킬:
+
+| 스킬 | 설명 |
+|---|---|
+| `/create-api` | 새 API 엔드포인트 스캐폴딩 (handler.py + terraform) |
+| `/apply-new-tech` | 새 기술 도입 방법 조사·비교·추천 |
+
+```bash
+# 예시
+/create-api POST /orders 주문 생성 API
+/apply-new-tech Redis 캐싱 도입
+```
+
+### 멀티 에이전트 Conductor 패턴
+
+여러 Claude Code 세션을 병렬로 운영하고 Conductor가 조율한다.
+
+```
+Conductor 세션
+    ├── BE 에이전트 세션  (be/ 디렉토리)
+    ├── FE 에이전트 세션  (fe/ 디렉토리)
+    └── 완료 신호 감지 → 다음 단계 트리거
+```
+
+에이전트 간 통신은 파일 신호로:
+```bash
+# 에이전트가 작업 완료 시
+touch ~/.ai-workspace/signals/be-api.done
+
+# Conductor가 감지 (30초 간격, 토큰 소비 없음)
+while true; do
+  [ -f ~/.ai-workspace/signals/be-api.done ] && \
+    rm $_ && claude -p "FE 연동 작업 시작..."
+  sleep 30
+done
+```
+
+자세한 내용: [`docs/ai-philosophy.md`](docs/ai-philosophy.md)
+
+---
+
 ## 의존성
 
 | 도구 | 용도 |
