@@ -88,6 +88,123 @@ done
 
 ---
 
+## Ground Rules
+
+### Branch Strategy (브랜치 전략)
+
+2-tier: dev(검증) / prod(운영).
+
+```
+main ──────────────────────────── prod 배포 (자동)
+ │
+ └── dev ──────────────────────── dev 배포 (자동), 데모/검증용
+      │
+      ├── feat/auth-middleware ── 기능 개발 (feature)
+      ├── fix/cors-error ──────── 버그 수정 (bugfix)
+      └── refactor/api-layer ──── 리팩토링
+```
+
+#### New Feature (새 기능)
+
+```
+1. main → feat/xxx 브랜치 생성
+2. feat에서 작업 + 작은 단위 커밋
+3. feat → dev (PR, squash merge) → dev 환경에서 검증
+4. 문제 시 feat에서 수정 → dev에 새 PR
+5. 검증 완료 → feat → main (PR, squash merge) → prod 배포
+```
+
+> **feat → dev (검증), feat → main (배포). dev → main 아님.**
+> dev에는 검증 중인 다른 feat이 섞여 있을 수 있으므로 feat에서 직접 main으로 merge한다.
+
+#### Hotfix (운영 긴급 수정)
+
+```
+1. main → hotfix/xxx 브랜치 생성
+2. 수정
+3. hotfix → main (PR, squash merge) → 즉시 배포
+4. main → dev (sync merge)
+```
+
+#### dev 브랜치 관리
+
+- dev는 실험장이다. 깨질 수 있다.
+- 지저분해지면 main 기준으로 리셋해도 된다.
+- dev 환경 데이터는 seed 데이터 — 언제든 초기화 가능.
+
+---
+
+### Commit Convention (커밋 컨벤션)
+
+#### Format (형식)
+
+```
+type(scope): short description in English
+한국어 설명 (optional)
+
+# Examples:
+feat(be): add JWT authentication middleware
+JWT 인증 미들웨어 추가
+
+fix(fe): resolve CORS error on API calls
+API 호출 시 CORS 에러 수정
+
+refactor: extract common error handler
+공통 에러 핸들러 분리
+```
+
+#### Type
+
+| type | 용도 |
+|---|---|
+| `feat` | 새 기능 (new feature) |
+| `fix` | 버그 수정 (bug fix) |
+| `refactor` | 리팩토링 (동작 변경 없음) |
+| `docs` | 문서 (documentation) |
+| `chore` | 빌드, 설정, 패키지 등 잡무 |
+| `ci` | CI/CD 변경 |
+| `test` | 테스트 추가/수정 |
+| `style` | 코드 포맷, 세미콜론 등 (동작 변경 없음) |
+
+#### Scope (선택)
+
+| scope | 대상 |
+|---|---|
+| `be` | backend |
+| `fe` | frontend |
+| `infra` | terraform, AWS |
+| 생략 | 전체 또는 루트 레포 |
+
+#### Commit Attitude (커밋 태도)
+
+- **feat 브랜치에서**: 자유롭게 — `wip`, `tmp`, `fix typo` 다 괜찮다.
+- **dev/main으로 squash merge할 때**: 의미 있는 메시지 하나로 정리한다.
+- **main merge 전 1분 멈추기**: "dev에서 테스트했나?", "기존 기능 깨뜨리진 않나?"
+
+---
+
+### Coding Convention (코딩 컨벤션)
+
+#### 공통 (Common)
+
+- 상수: `UPPER_SNAKE_CASE`
+- 불필요한 주석 X — 코드로 의도를 표현한다.
+- 에러는 삼키지 않는다 — 명시적으로 처리하거나 위로 전파한다.
+
+#### Backend (Python)
+
+- 함수/변수: `snake_case`
+- 클래스: `PascalCase`
+- 파일명: `snake_case.py`
+
+#### Frontend (JavaScript/React)
+
+- 함수/변수: `camelCase`
+- 컴포넌트: `PascalCase` (파일명도 `PascalCase.jsx`)
+- 유틸/훅 파일: `camelCase.js`
+
+---
+
 ## 환경 설정
 
 ```bash
