@@ -31,16 +31,22 @@ fi
 source "$CONFIG_FILE"
 info "config.env 로드 완료"
 
-GIT_BASE="https://x-access-token:${GITHUB_TOKEN}@github.com"
-GITHUB_API="https://api.github.com"
-AUTH_HEADER="Authorization: token ${GITHUB_TOKEN}"
-
 # ============================================================
 # 필수 값 검증
 # ============================================================
-for var in GITHUB_TOKEN BOILERPLATE_OWNER BOILERPLATE_FE_REPO BOILERPLATE_BE_REPO; do
+for var in BOILERPLATE_OWNER BOILERPLATE_FE_REPO BOILERPLATE_BE_REPO; do
   [ -n "${!var}" ] || error "${var} 이 config.env 에 설정되지 않았습니다."
 done
+
+# ============================================================
+# 의존성 확인
+# ============================================================
+for cmd in git gh; do
+  command -v "$cmd" &> /dev/null || error "'$cmd' 가 설치되어 있지 않습니다."
+done
+gh auth status &> /dev/null || error "'gh auth login' 먼저 실행해주세요."
+
+PRIVATE_FLAG=$( [ "$GITHUB_VISIBILITY" = "private" ] && echo "--private" || echo "--public" )
 
 # ============================================================
 # GitHub repo 생성
@@ -49,34 +55,21 @@ create_github_repo() {
   local repo_name=$1
   local description=$2
 
-  local status
-  status=$(curl -s -o /dev/null -w "%{http_code}" \
-    -H "$AUTH_HEADER" \
-    "${GITHUB_API}/repos/${BOILERPLATE_OWNER}/${repo_name}")
-
-  if [ "$status" = "200" ]; then
+  if gh repo view "${BOILERPLATE_OWNER}/${repo_name}" &> /dev/null; then
     warn "레포가 이미 존재합니다: ${BOILERPLATE_OWNER}/${repo_name}"
     return
   fi
 
-  if [ "$GITHUB_OWNER_TYPE" = "org" ]; then
-    api_url="${GITHUB_API}/orgs/${BOILERPLATE_OWNER}/repos"
-  else
-    api_url="${GITHUB_API}/user/repos"
-  fi
+  gh repo create "${BOILERPLATE_OWNER}/${repo_name}" \
+    $PRIVATE_FLAG \
+    --description "${description}" \
+    > /dev/null
 
-  status=$(curl -s -o /dev/null -w "%{http_code}" \
-    -H "$AUTH_HEADER" \
-    -H "Content-Type: application/json" \
-    -d "{\"name\": \"${repo_name}\", \"description\": \"${description}\", \"private\": false}" \
-    "$api_url")
-
-  [ "$status" = "201" ] || error "레포 생성 실패: ${repo_name} (HTTP $status)"
   info "레포 생성 완료: ${BOILERPLATE_OWNER}/${repo_name}"
 }
 
 # ============================================================
-# git init → commit → push
+# git init → commit → push (SSH)
 # ============================================================
 init_and_push() {
   local dir=$1
@@ -97,7 +90,7 @@ init_and_push() {
     warn "커밋할 변경사항이 없습니다: ${repo_name}"
   fi
 
-  local remote_url="${GIT_BASE}/${BOILERPLATE_OWNER}/${repo_name}.git"
+  local remote_url="git@github.com:${BOILERPLATE_OWNER}/${repo_name}.git"
   git remote remove origin 2>/dev/null || true
   git remote add origin "$remote_url"
   git push -u origin main

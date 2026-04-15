@@ -32,13 +32,10 @@ fi
 source "$CONFIG_FILE"
 info "dev.env 로드 완료"
 
-# git 인증용 base URL (토큰 포함, git 내부에서만 사용)
-GIT_BASE="https://x-access-token:${GITHUB_TOKEN}@github.com"
-
 # ============================================================
 # 필수 값 검증
 # ============================================================
-for var in PROJECT_NAME GITHUB_OWNER GITHUB_OWNER_TYPE GITHUB_TOKEN \
+for var in PROJECT_NAME GITHUB_OWNER GITHUB_OWNER_TYPE \
            BOILERPLATE_OWNER BOILERPLATE_FE_REPO BOILERPLATE_BE_REPO \
            AWS_REGION AWS_ACCOUNT_ID; do
   [ -n "${!var}" ] || error "${var} 이 dev.env 에 설정되지 않았습니다."
@@ -48,25 +45,26 @@ info "필수 값 검증 완료"
 # ============================================================
 # 의존성 확인
 # ============================================================
-for cmd in git curl; do
+for cmd in git gh; do
   command -v "$cmd" &> /dev/null || error "'$cmd' 가 설치되어 있지 않습니다."
 done
-info "의존성 확인 완료 (git, curl)"
+info "의존성 확인 완료 (git, gh)"
 
-GITHUB_API="https://api.github.com"
-AUTH_HEADER="Authorization: token ${GITHUB_TOKEN}"
-PRIVATE=$( [ "$GITHUB_VISIBILITY" = "private" ] && echo "true" || echo "false" )
+# gh 인증 + SSH 사용 가능 여부 체크
+gh auth status &> /dev/null || error "'gh auth login' 먼저 실행해주세요."
+ssh -T -o BatchMode=yes -o StrictHostKeyChecking=no git@github.com 2>&1 | \
+  grep -q "successfully authenticated" || \
+  error "GitHub SSH 접근 실패. ~/.ssh/ 키가 GitHub 에 등록되어 있는지 확인하세요."
+info "gh 인증 + SSH 접근 확인 완료"
+
+PRIVATE_FLAG=$( [ "$GITHUB_VISIBILITY" = "private" ] && echo "--private" || echo "--public" )
 
 # ============================================================
 # GitHub repo 존재 여부 확인
 # ============================================================
 repo_exists() {
   local repo_name=$1
-  local status
-  status=$(curl -s -o /dev/null -w "%{http_code}" \
-    -H "$AUTH_HEADER" \
-    "${GITHUB_API}/repos/${GITHUB_OWNER}/${repo_name}")
-  [ "$status" = "200" ]
+  gh repo view "${GITHUB_OWNER}/${repo_name}" &> /dev/null
 }
 
 # ============================================================
@@ -81,21 +79,11 @@ create_github_repo() {
     return
   fi
 
-  local api_url
-  if [ "$GITHUB_OWNER_TYPE" = "org" ]; then
-    api_url="${GITHUB_API}/orgs/${GITHUB_OWNER}/repos"
-  else
-    api_url="${GITHUB_API}/user/repos"
-  fi
+  gh repo create "${GITHUB_OWNER}/${repo_name}" \
+    $PRIVATE_FLAG \
+    --description "${description}" \
+    > /dev/null
 
-  local status
-  status=$(curl -s -o /dev/null -w "%{http_code}" \
-    -H "$AUTH_HEADER" \
-    -H "Content-Type: application/json" \
-    -d "{\"name\": \"${repo_name}\", \"description\": \"${description}\", \"private\": ${PRIVATE}}" \
-    "$api_url")
-
-  [ "$status" = "201" ] || error "레포 생성 실패: ${repo_name} (HTTP $status)"
   info "레포 생성 완료: ${GITHUB_OWNER}/${repo_name}"
 }
 
@@ -122,7 +110,7 @@ replace_placeholders() {
 }
 
 # ============================================================
-# boilerplate 클론 → remote 교체 → push → submodule 등록
+# boilerplate 클론 (SSH) → remote 교체 → push → submodule 등록
 # boilerplate_repo : e.g. boilerplate-fe
 # new_repo_name    : e.g. my-app-fe
 # submodule_path   : e.g. fe
@@ -134,17 +122,15 @@ setup_sub_repo() {
 
   local tmp_dir
   tmp_dir=$(mktemp -d)
-  # 토큰 없는 plain URL → .gitmodules 에 저장됨
-  local plain_remote="https://github.com/${GITHUB_OWNER}/${new_repo_name}.git"
-  # 토큰 포함 URL → git push 인증용
-  local auth_remote="${GIT_BASE}/${GITHUB_OWNER}/${new_repo_name}.git"
+  local ssh_remote="git@github.com:${GITHUB_OWNER}/${new_repo_name}.git"
+  local boilerplate_ssh="git@github.com:${BOILERPLATE_OWNER}/${boilerplate_repo}.git"
 
   info "${boilerplate_repo} 클론 중..."
-  git clone "${GIT_BASE}/${BOILERPLATE_OWNER}/${boilerplate_repo}.git" "$tmp_dir"
+  git clone "$boilerplate_ssh" "$tmp_dir"
 
   replace_placeholders "$tmp_dir"
 
-  git -C "$tmp_dir" remote set-url origin "$auth_remote"
+  git -C "$tmp_dir" remote set-url origin "$ssh_remote"
 
   if [ -n "$(git -C "$tmp_dir" status --porcelain)" ]; then
     git -C "$tmp_dir" add -A
@@ -162,8 +148,8 @@ setup_sub_repo() {
     info "기존 submodule 제거 완료: ${submodule_path}"
   fi
 
-  # submodule 등록 (plain URL 사용 - .gitmodules 에 커밋됨)
-  git -C "$ROOT_DIR" submodule add "$plain_remote" "$submodule_path"
+  # submodule 등록 (SSH URL 사용 — .gitmodules 에 커밋됨)
+  git -C "$ROOT_DIR" submodule add "$ssh_remote" "$submodule_path"
 
   rm -rf "$tmp_dir"
   info "submodule 등록 완료: ${submodule_path} → ${new_repo_name}"
@@ -192,8 +178,8 @@ setup_sub_repo "$BOILERPLATE_BE_REPO" "$BE_REPO_NAME" "be"
 info "===== Main repo 커밋 ====="
 cd "$ROOT_DIR"
 
-# origin을 새 레포로 변경 (boilerplate-app clone 시 원래 remote 덮어쓰기)
-git remote set-url origin "${GIT_BASE}/${GITHUB_OWNER}/${PROJECT_NAME}.git"
+# origin을 새 레포로 변경 (SSH)
+git remote set-url origin "git@github.com:${GITHUB_OWNER}/${PROJECT_NAME}.git"
 
 git add .gitmodules fe be
 git commit -m "chore: add fe/be submodules for ${PROJECT_NAME}"

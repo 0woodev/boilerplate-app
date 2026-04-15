@@ -27,12 +27,13 @@ info "dev.env 로드 완료"
 # ============================================================
 # 필수 값 검증
 # ============================================================
-for var in PROJECT_NAME GITHUB_OWNER GITHUB_TOKEN AWS_REGION AWS_ACCOUNT_ID; do
+for var in PROJECT_NAME GITHUB_OWNER AWS_REGION AWS_ACCOUNT_ID; do
   [ -n "${!var}" ] || error "${var} 이 dev.env 에 설정되지 않았습니다."
 done
 
-GITHUB_API="https://api.github.com"
-AUTH_HEADER="Authorization: token ${GITHUB_TOKEN}"
+command -v gh &> /dev/null || error "'gh' 가 설치되어 있지 않습니다."
+gh auth status &> /dev/null || error "'gh auth login' 먼저 실행해주세요."
+
 FE_REPO_NAME="${PROJECT_NAME}-fe"
 BE_REPO_NAME="${PROJECT_NAME}-be"
 TF_STATE_BUCKET="${GITHUB_OWNER}-${PROJECT_NAME}-tf-state"
@@ -59,17 +60,11 @@ read -r CONFIRM
 # ============================================================
 delete_github_repo() {
   local repo_name=$1
-  local status
-  status=$(curl -s -o /dev/null -w "%{http_code}" \
-    -X DELETE \
-    -H "$AUTH_HEADER" \
-    "${GITHUB_API}/repos/${GITHUB_OWNER}/${repo_name}")
-  if [ "$status" = "204" ]; then
+  if gh repo view "${GITHUB_OWNER}/${repo_name}" &> /dev/null; then
+    gh repo delete "${GITHUB_OWNER}/${repo_name}" --yes
     info "GitHub 레포 삭제 완료: ${GITHUB_OWNER}/${repo_name}"
-  elif [ "$status" = "404" ]; then
-    warn "GitHub 레포 없음 (이미 삭제됨): ${GITHUB_OWNER}/${repo_name}"
   else
-    warn "GitHub 레포 삭제 실패: ${repo_name} (HTTP $status)"
+    warn "GitHub 레포 없음 (이미 삭제됨): ${GITHUB_OWNER}/${repo_name}"
   fi
 }
 
