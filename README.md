@@ -34,12 +34,66 @@
 brew install git awscli gh terraform
 ```
 
-`gh auth login` 으로 GitHub CLI 인증.
+#### GitHub 인증 (두 가지 모두 필요)
+
+이 boilerplate 는 **GitHub API 호출** + **git clone/push** 두 경로로 GitHub 과 통신한다.
+각각 다른 인증이 필요하며, PAT(Personal Access Token) 는 사용하지 않는다.
+
+| 용도 | 수단 | 세팅 명령 |
+|---|---|---|
+| 레포 생성/삭제 등 API 호출 | `gh` CLI | `gh auth login` |
+| git clone / push | SSH | GitHub 계정에 공개키 등록 |
+
+##### A. `gh` CLI 로그인
+
+```bash
+gh auth login
+# → GitHub.com 선택 → HTTPS 선택(여기선 clone 용 아니라 API 용) → 브라우저 인증
+gh auth status                   # 로그인 확인
+```
+
+> 이미 로그인돼 있으면 건너뛰기.
+
+##### B. SSH 키 등록
+
+이미 등록됐는지 먼저 확인:
+
+```bash
+ssh -T git@github.com
+# 성공 메시지:
+#   Hi <username>! You've successfully authenticated, but GitHub does not provide shell access.
+```
+
+위 메시지가 나오면 OK, 아래는 건너뛰기. **안 나오면** 새 키 발급 + 등록:
+
+```bash
+# 1) 새 키 생성 (이미 있으면 기존 키 써도 됨)
+ssh-keygen -t ed25519 -C "your_email@example.com"
+# → 경로 기본값 Enter, passphrase 도 Enter(생략) 가능
+
+# 2) ssh-agent 에 키 등록 (macOS 재부팅 시 유지되게)
+eval "$(ssh-agent -s)"
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519   # macOS
+# Linux: ssh-add ~/.ssh/id_ed25519
+
+# 3) GitHub 계정에 공개키 등록 (gh CLI 사용 — 위 A 단계 후)
+gh ssh-key add ~/.ssh/id_ed25519.pub --title "$(hostname)"
+
+# 4) 재검증
+ssh -T git@github.com
+```
+
+> **왜 PAT 를 안 쓰는가?** 토큰 발급/저장/만료 관리가 번거롭고, `dev.env` 에 민감정보가 남아
+> 실수 커밋 위험이 있다. `gh` + SSH 조합은 한 번 세팅하면 모든 프로젝트에서 재사용되고,
+> `dev.env` 에 비밀이 남지 않는다.
+>
+> 굳이 PAT 흐름을 선호하면 이 브랜치 이전 버전(`git log --grep="gh CLI"` 의 직전 commit)의
+> 스크립트를 참고. 팀 내 표준은 `gh` + SSH.
 
 ### 1. 클론
 
 ```bash
-git clone https://github.com/0woodev/boilerplate-app.git {app_name}
+git clone git@github.com:0woodev/boilerplate-app.git {app_name}
 cd {app_name}
 ```
 
@@ -60,7 +114,6 @@ DOMAIN="0woodev.com"
 GITHUB_OWNER="0woodev"             # GitHub 유저명 또는 org명
 GITHUB_OWNER_TYPE="user"           # "user" | "org"
 GITHUB_VISIBILITY="public"         # "public" | "private"
-GITHUB_TOKEN="ghp_..."             # GitHub PAT (아래 PAT 발급 참고)
 
 AWS_REGION="ap-northeast-2"
 AWS_ACCOUNT_ID="123456789012"
@@ -70,20 +123,6 @@ FE_DOMAIN="https://${PROJECT_NAME}-${STAGE}.${DOMAIN}"
 ```
 
 `prod.env`는 `STAGE="prod"`, `FE_DOMAIN="https://${PROJECT_NAME}.${DOMAIN}"` 으로 설정.
-
-#### GitHub PAT 발급
-
-[GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens](https://github.com/settings/tokens)
-
-필요 권한:
-- **Repository permissions** → Contents: Read and write
-- **Repository permissions** → Variables: Read and write
-- **Repository permissions** → Secrets: Read and write
-- **Repository permissions** → Environments: Read and write
-- **Repository permissions** → Administration: Read and write (레포 생성 시 필요)
-- **Repository permissions** → Workflows: Read and write
-
-> Classic PAT는 `repo` + `workflow` 스코프로도 가능.
 
 ### 3. AWS CLI 설정
 
@@ -202,6 +241,42 @@ sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder
 2. **Clear host cache** 클릭
 
 위 방법으로도 안 되면 ISP DNS가 아직 전파되지 않은 것이므로 잠시 기다렸다가 재시도하세요.
+
+---
+
+## Troubleshooting — 인증 관련
+
+### `setup.sh` 실행 시 "gh auth login 먼저 실행해주세요"
+
+```bash
+gh auth status      # 현재 상태 확인
+gh auth login       # 로그인
+gh auth refresh -s repo,workflow   # 권한 부족 시 스코프 추가
+```
+
+### "GitHub SSH 접근 실패"
+
+```bash
+ssh -vT git@github.com   # 자세한 디버그 로그
+```
+
+자주 보는 원인:
+- **SSH 키가 없음** — `ls ~/.ssh/id_*.pub` 로 확인, 없으면 위 **B. SSH 키 등록** 재실행
+- **키는 있지만 GitHub 에 안 올림** — `gh ssh-key list` 로 확인, 없으면 `gh ssh-key add ~/.ssh/id_ed25519.pub`
+- **ssh-agent 에 키 로드 안 됨** — `ssh-add -l` 로 확인, 없으면 `ssh-add ~/.ssh/id_ed25519`
+- **GitHub 조직 SAML SSO** — org 레포 쓰려면 SSH 키에서 "Configure SSO → Authorize" 클릭 필요
+
+### git push 시 "Permission denied (publickey)"
+
+위 SSH 체크와 동일. `ssh -T git@github.com` 성공 메시지 먼저 확보.
+
+### 이미 HTTPS 로 clone 돼 있던 레포를 SSH 로 바꾸기
+
+```bash
+cd {repo}
+git remote set-url origin git@github.com:{OWNER}/{REPO}.git
+git remote -v    # git@... 로 바뀐 것 확인
+```
 
 ---
 
