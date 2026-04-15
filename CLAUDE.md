@@ -211,7 +211,8 @@ refactor: extract common error handler
 # 환경 파일
 cp sample.env dev.env
 cp sample.env prod.env
-# 각 파일에서 PROJECT_NAME, AWS_ACCOUNT_ID, GITHUB_TOKEN 등 설정
+# 각 파일에서 PROJECT_NAME, AWS_ACCOUNT_ID 등 설정
+# (GitHub 인증은 `gh auth login` + SSH 키 등록으로 대체됨 — 토큰 불필요)
 ```
 
 프로젝트 초기화:
