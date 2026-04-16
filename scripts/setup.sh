@@ -14,23 +14,36 @@ warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
 # ============================================================
-# dev.env 로드
+# dev.env / prod.env 로드 — 둘 중 하나라도 없으면 sample 복사 후 종료
+# (사용자가 값 채운 뒤 재실행)
 # ============================================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${SCRIPT_DIR}/.."
-CONFIG_FILE="${ROOT_DIR}/dev.env"
-CONFIG_SAMPLE="${ROOT_DIR}/sample.env"
+DEV_ENV="${ROOT_DIR}/dev.env"
+PROD_ENV="${ROOT_DIR}/prod.env"
+DEV_SAMPLE="${ROOT_DIR}/dev.sample.env"
+PROD_SAMPLE="${ROOT_DIR}/prod.sample.env"
 
-if [ ! -f "$CONFIG_FILE" ]; then
-  [ -f "$CONFIG_SAMPLE" ] || error "sample.env 파일이 없습니다: $CONFIG_SAMPLE"
-  cp "$CONFIG_SAMPLE" "$CONFIG_FILE"
-  info "sample.env → dev.env 복사 완료"
-  warn "dev.env 를 열어 값을 채운 후 다시 실행해주세요."
+NEED_FILL=0
+for env_pair in "$DEV_ENV:$DEV_SAMPLE" "$PROD_ENV:$PROD_SAMPLE"; do
+  target="${env_pair%:*}"
+  sample="${env_pair#*:}"
+  if [ ! -f "$target" ]; then
+    [ -f "$sample" ] || error "sample 파일이 없습니다: $sample"
+    cp "$sample" "$target"
+    info "$(basename "$sample") → $(basename "$target") 복사 완료"
+    NEED_FILL=1
+  fi
+done
+
+if [ "$NEED_FILL" = "1" ]; then
+  warn "dev.env / prod.env 를 열어 값을 채운 후 다시 실행해주세요."
   exit 0
 fi
 
-source "$CONFIG_FILE"
-info "dev.env 로드 완료"
+# dev.env 기준으로 진행 (GitHub 레포 생성 등 stage 무관 작업)
+source "$DEV_ENV"
+info "dev.env / prod.env 로드 완료 (이 스크립트는 dev.env 기준 진행)"
 
 # ============================================================
 # 필수 값 검증
@@ -301,6 +314,24 @@ fi
 fi  # aws CLI check
 
 # ============================================================
+# 6. BE/FE 양쪽에 GitHub Actions vars/env 자동 등록 (dev + prod)
+# ============================================================
+info "===== GitHub Actions vars/env 등록 (dev + prod) ====="
+for stage_env in "$DEV_ENV" "$PROD_ENV"; do
+  stage_name=$(basename "$stage_env" .env)
+  for sub in "be" "fe"; do
+    sub_path="${ROOT_DIR}/${sub}"
+    if [ -f "${sub_path}/scripts/github.sh" ]; then
+      info "→ ${sub}/scripts/github.sh setup ${stage_name}"
+      bash "${sub_path}/scripts/github.sh" setup "${stage_name}" "$stage_env" || \
+        warn "${sub} ${stage_name} setup 실패 (수동 실행 필요)"
+    else
+      warn "${sub}/scripts/github.sh 가 없습니다 — 수동 등록 필요"
+    fi
+  done
+done
+
+# ============================================================
 # 완료
 # ============================================================
 echo ""
@@ -308,7 +339,19 @@ info "===== 셋업 완료 ====="
 echo ""
 echo "  FE repo  : https://github.com/${GITHUB_OWNER}/${FE_REPO_NAME}"
 echo "  BE repo  : https://github.com/${GITHUB_OWNER}/${BE_REPO_NAME}"
-echo "  FE url   : ${FE_DOMAIN}"
-echo "  BE url   : https://${BE_DOMAIN}"
+echo ""
+echo "  ── dev ──"
+. "$DEV_ENV"
+echo "    FE  : ${FE_URL}"
+echo "    BE  : ${BE_URL}"
+echo "  ── prod ──"
+. "$PROD_ENV"
+echo "    FE  : ${FE_URL}"
+echo "    BE  : ${BE_URL}"
+echo ""
 echo "  TF state : s3://${TF_STATE_BUCKET}"
+echo ""
+echo "  다음 단계:"
+echo "    1. BE 레포 → Actions → 'Terraform Global' 1회 실행 (OIDC role 생성)"
+echo "    2. dev 브랜치 push → 자동 배포"
 echo ""
