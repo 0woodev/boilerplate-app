@@ -59,9 +59,49 @@ git push
 ## 스킬 사용
 
 ```
-/create-api    → be/ 디렉토리에서 새 API 엔드포인트 생성
-/apply-new-tech → 새 기술 도입 방법 조사 및 추천
+/create-api       → be/ 디렉토리에서 새 API 엔드포인트 생성
+/apply-new-tech   → 새 기술 도입 방법 조사 및 추천
+/update-README-md → 소스코드 기반으로 모든 README.md 최신화
 ```
+
+### /update-README-md 실행 타이밍
+
+- **setup.sh 완료 직후** (boilerplate에서 분리된 시점) — 1회 필수 실행
+- **주요 기능 추가/변경 후** — 주기적 실행 권장
+- **PR 생성 전** — README 최신 여부 확인
+
+---
+
+## 서브모듈 추가 (be/fe 외)
+
+프로젝트에 macro, worker, admin 등 **새 서브레포**가 필요할 때:
+
+```bash
+# 1. GitHub 레포 생성
+gh repo create {GITHUB_OWNER}/{PROJECT_NAME}-macro --private
+
+# 2. 로컬에서 초기화 + push
+mkdir /tmp/macro-init && cd /tmp/macro-init
+git init && echo "# {PROJECT_NAME}-macro" > README.md
+git add . && git commit -m "chore: init"
+git remote add origin git@github.com:{GITHUB_OWNER}/{PROJECT_NAME}-macro.git
+git push -u origin main
+
+# 3. 서브모듈로 등록
+cd {PROJECT_ROOT}
+git submodule add git@github.com:{GITHUB_OWNER}/{PROJECT_NAME}-macro.git macro
+git add .gitmodules macro
+git commit -m "chore: add macro submodule"
+git push
+
+# 4. (선택) dev 브랜치 생성
+cd macro && git checkout -b dev && git push -u origin dev && cd ..
+
+# 5. (선택) GitHub Actions vars 등록 — scripts/github.sh 가 있으면
+cd macro && bash scripts/github.sh setup dev ../../dev.env
+```
+
+서브모듈 추가 후 **반드시 `/update-README-md` 실행**해서 README 최신화.
 
 ---
 
@@ -208,16 +248,19 @@ refactor: extract common error handler
 ## 환경 설정
 
 ```bash
-# 환경 파일
-cp sample.env dev.env
-cp sample.env prod.env
+# 환경 파일 (stage별 분리)
+cp dev.sample.env dev.env     # dev 환경
+cp prod.sample.env prod.env   # prod 환경
 # 각 파일에서 PROJECT_NAME, AWS_ACCOUNT_ID 등 설정
 # (GitHub 인증은 `gh auth login` + SSH 키 등록으로 대체됨 — 토큰 불필요)
 ```
 
 프로젝트 초기화:
 ```bash
-bash scripts/setup.sh    # GitHub 레포 생성 + AWS 백엔드 초기화
-cd be && make gh-setup STAGE=dev
-cd be && make gh-setup STAGE=prod
+bash scripts/setup.sh    # GitHub 레포 생성 + AWS 백엔드 초기화 + GH vars 자동 등록
+```
+
+초기화 후 필수:
+```bash
+/update-README-md         # README.md 최신화 (boilerplate → 프로젝트 전환)
 ```
