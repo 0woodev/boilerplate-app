@@ -180,6 +180,30 @@ refactor: extract common error handler
 - **feat 브랜치에서**: 자유롭게 — `wip`, `tmp`, `fix typo` 다 괜찮다.
 - **dev/main으로 squash merge할 때**: 의미 있는 메시지 하나로 정리한다.
 - **main merge 전 1분 멈추기**: "dev에서 테스트했나?", "기존 기능 깨뜨리진 않나?"
+- **작게 자주 커밋한다** — 작업을 잘게 쪼개서 의미 있는 단위(테스트 통과한 작은 변경)마다 커밋. 거대한 단일 커밋 금지.
+
+---
+
+### Activity Log (활동 로그)
+
+`ACTIVITY.md` (루트, git 추적) 는 최근 작업의 압축 요약. `what-to-do` 스킬이 영역별 git log/CLAUDE.md/README 를 다시 읽지 않고 이걸로 빠르게 컨텍스트를 잡는다.
+
+#### 작성 규칙
+
+- **언제**: 의미 있는 커밋(feat/fix/refactor/docs/chore 등 코드/문서/인프라 변경)이 만들어질 때마다 한 줄 추가. submodule 포인터 단독 업데이트는 제외 (이미 subrepo 커밋이 자기 줄을 차지함).
+- **형식**: `| YYYY-MM-DD | scope | one-line summary (#PR) |` — 한 줄 ≤ 100자.
+- **scope**: `root` / `be` / `fe` / `infra` / `docs`.
+- **순서**: 최신이 맨 위 (역순).
+- **WIP/tmp 커밋은 제외** — squash 후 의미 있는 단위만.
+
+#### 압축 규칙
+
+- **50줄 초과 시**: 가장 오래된 10줄을 `PROGRESS.md` 의 `## 활동 로그 아카이브` 섹션 맨 위에 통째로 이관 후 `ACTIVITY.md` 에서 삭제. 줄 자체는 그대로 보존 (이미 한 줄로 압축된 상태이므로 추가 요약 X).
+- 아카이브 섹션이 없으면 새로 만든다.
+
+#### 커밋 + 활동 로그를 같이 처리
+
+작은 단위 커밋을 만들 때 변경 파일에 `ACTIVITY.md` 한 줄 추가도 같이 포함시킨다. 별도 커밋으로 분리하지 않는다. (예: `feat(fe): X` 커밋이 `fe/...` 변경 + `ACTIVITY.md` 한 줄 추가를 모두 포함)
 
 ---
 
