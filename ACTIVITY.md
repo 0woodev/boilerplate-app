@@ -5,6 +5,7 @@
 
 | 날짜 | scope | 요약 |
 |---|---|---|
+| 2026-06-23 | infra | patch-notes 워크플로를 app(오케스트레이터)로 이동 — ACTIVITY.md 소유+서브모듈 체크아웃 필요 |
 | 2026-06-23 | be | L2 LLM provider 플러그형(anthropic/openai env 선택) + 한국어 출력 프롬프트 (OpenAI 실호출 검증) |
 | 2026-06-23 | fe | PatchNote 개발자용/사용자용 뷰(?dev=true 토글, 빈 본문 카드 숨김) + 본문 2개 편집 + e2e dev 뷰 |
 | 2026-06-23 | be | PatchNote body→user_body/dev_body 분리 + L2가 두 본문 각각 생성(빈 것만, dev=기술/user=친화) |
