@@ -5,6 +5,7 @@
 
 | 날짜 | scope | 요약 |
 |---|---|---|
+| 2026-06-23 | fe | PatchNote e2e 추가 (Playwright: 로그인→목록→생성→편집) — 빈 e2e/ 디렉터리 첫 스펙 |
 | 2026-06-23 | fe | PatchNote 화면: usePatchNotes 훅 + 날짜별 타임라인(Markdown 바디·title/body 편집) + nav/route + MSW |
 | 2026-06-23 | be | PatchNote 데모 도메인: model+API(GET공개/CUD인증)+terraform + generate_patch_notes.py(L1 멱등+L2 LLM초안) + CI |
 | 2026-06-23 | fe | hj-adlog 풀스택 이식: TS·Tailwind·shadcn(기본셋12)·TanStack Query·MSW·앱셸·헤더인증(X-Auth-User) 스켈레톤 |
