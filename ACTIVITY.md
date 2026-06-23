@@ -5,6 +5,7 @@
 
 | 날짜 | scope | 요약 |
 |---|---|---|
+| 2026-06-23 | be | L2 LLM provider 플러그형(anthropic/openai env 선택) + 한국어 출력 프롬프트 (OpenAI 실호출 검증) |
 | 2026-06-23 | fe | PatchNote 개발자용/사용자용 뷰(?dev=true 토글, 빈 본문 카드 숨김) + 본문 2개 편집 + e2e dev 뷰 |
 | 2026-06-23 | be | PatchNote body→user_body/dev_body 분리 + L2가 두 본문 각각 생성(빈 것만, dev=기술/user=친화) |
 | 2026-06-23 | fe | PatchNote e2e 추가 (Playwright: 로그인→목록→생성→편집) — 빈 e2e/ 디렉터리 첫 스펙 |
